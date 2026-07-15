@@ -21,7 +21,7 @@ GitHub Pull Requestから技術記事のテーマと下書きを生成し、提�
 
 - `owner/repo` を指定したGitHub PR取得
 - GitHub APIレスポンスをアプリ用のPRデータへ正規化
-- Groq APIを使った記事テーマ生成
+- xAI Grok APIを使った記事テーマ生成
 - 記事下書きMarkdownの生成
 - 生成した提案のローカルJSON保存
 - 保存済み提案の読み込み
@@ -47,7 +47,7 @@ GitHub Pull Requestから技術記事のテーマと下書きを生成し、提�
 - Icons: lucide-react
 - Backend: Node.js built-in HTTP server
 - External API: GitHub REST API
-- AI: Groq Chat Completions API
+- AI: xAI Grok API
 - Storage: Local JSON files
 - Package manager: npm
 
@@ -57,12 +57,12 @@ GitHub Pull Requestから技術記事のテーマと下書きを生成し、提�
 flowchart LR
   Browser[React UI] --> Node[Node API Server]
   Node --> GitHub[GitHub REST API]
-  Node --> Groq[Groq API]
+  Node --> Grok[xAI Grok API]
   Node --> Suggestions[(.data/suggestions.json)]
   Node --> Settings[(.data/settings.json)]
 ```
 
-ブラウザからGitHub APIやAI APIを直接呼ばず、同梱のNodeサーバーを経由します。`GITHUB_TOKEN` や `GROQ_API_KEY` はサーバー側の環境変数として扱い、クライアント側へ露出させない構成にしています。
+ブラウザからGitHub APIやAI APIを直接呼ばず、同梱のNodeサーバーを経由します。`GITHUB_TOKEN` や `XAI_API_KEY` はサーバー側の環境変数として扱い、クライアント側へ露出させない構成にしています。
 
 MVP段階ではDBを使わず、提案データと設定データをローカルJSONに保存します。保存処理はサーバー側APIに閉じているため、後からDBへ置き換えやすい構成です。
 
@@ -114,8 +114,8 @@ http://127.0.0.1:5173/
 
 ```bash
 GITHUB_TOKEN=
-GROQ_API_KEY=
-GROQ_MODEL=llama-3.3-70b-versatile
+XAI_API_KEY=
+XAI_MODEL=grok-4.5
 SUGGESTIONS_STORE_PATH=
 SETTINGS_STORE_PATH=
 ```
@@ -124,13 +124,13 @@ SETTINGS_STORE_PATH=
 
 GitHub API用のトークンです。Public Repositoryは未設定でも取得できますが、Private Repositoryの取得やrate limit緩和が必要な場合は設定します。
 
-### `GROQ_API_KEY`
+### `XAI_API_KEY`
 
-記事テーマと下書き生成に使用します。
+xAI Grok API用のトークンです。記事テーマと下書き生成に使用します。
 
-### `GROQ_MODEL`
+### `XAI_MODEL`
 
-Groqで使用するモデル名です。未設定時はサーバー側のデフォルトを使用します。
+xAIで使用するGrokモデル名です。未設定時は `grok-4.5` を使用します。
 
 ### `SUGGESTIONS_STORE_PATH`
 
@@ -178,7 +178,7 @@ npm run start
 
 ### 秘密情報をクライアントに置かない
 
-GitHub tokenやAI API keyはNodeサーバー側の環境変数で扱います。ブラウザ側のフォームやLocalStorageには保存しません。
+GitHub tokenやxAI API keyはNodeサーバー側の環境変数で扱います。ブラウザ側のフォームやLocalStorageには保存しません。
 
 ### プロトタイプから必要な部分だけ移植する
 
