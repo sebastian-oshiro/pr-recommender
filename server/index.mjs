@@ -3,6 +3,7 @@ import { createReadStream, existsSync, statSync } from 'node:fs';
 import { extname, join, normalize } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { handleGitHubPrsRequest } from './github-prs.mjs';
+import { handleSuggestionGenerationRequest } from './suggestions.mjs';
 
 const rootDir = fileURLToPath(new URL('..', import.meta.url));
 const distDir = join(rootDir, 'dist');
@@ -58,6 +59,11 @@ const handleAppRequest = await createRequestHandler();
 const server = createServer((req, res) => {
   if (req.url?.startsWith('/api/github/prs')) {
     void handleGitHubPrsRequest(req, res);
+    return;
+  }
+
+  if (req.url?.startsWith('/api/suggestions/generate')) {
+    void handleSuggestionGenerationRequest(req, res);
     return;
   }
 

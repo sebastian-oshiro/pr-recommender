@@ -31,6 +31,7 @@ export interface BlogSuggestion {
   status: SuggestionStatus;
   createdAt: string;
   score: number;
+  draftMarkdown?: string;
 }
 
 export interface DashboardStats {

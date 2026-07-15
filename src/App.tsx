@@ -7,7 +7,7 @@ import PRAnalysis from './pages/PRAnalysis';
 import Settings from './pages/Settings';
 import SuggestionDetail from './components/suggestion/SuggestionDetail';
 import { samplePRs, sampleSuggestions } from './data/sampleData';
-import { GitHubPR, PageType, SuggestionStatus } from './types';
+import { BlogSuggestion, GitHubPR, PageType, SuggestionStatus } from './types';
 import './App.css';
 
 export default function App() {
@@ -21,6 +21,11 @@ export default function App() {
     setSuggestions(prev =>
       prev.map(s => s.id === id ? { ...s, status } : s)
     );
+  };
+
+  const handleSuggestionGenerated = (suggestion: BlogSuggestion) => {
+    setSuggestions(prev => [suggestion, ...prev]);
+    setSelectedSuggestionId(suggestion.id);
   };
 
   const selectedSuggestion = selectedSuggestionId
@@ -67,6 +72,7 @@ export default function App() {
             <PRAnalysis
               prs={prs}
               suggestions={suggestions}
+              onSuggestionGenerated={handleSuggestionGenerated}
             />
           )}
           {currentPage === 'settings' && (

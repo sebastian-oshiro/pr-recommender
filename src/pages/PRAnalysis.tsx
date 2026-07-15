@@ -1,11 +1,13 @@
 import { useState } from 'react';
-import { Search, GitPullRequest, GitMerge, Bot, Sparkles, CircleCheck as CheckCircle2 } from 'lucide-react';
+import { Search, GitPullRequest, GitMerge, Bot, Sparkles, CircleCheck as CheckCircle2, CircleAlert as AlertCircle } from 'lucide-react';
 import PRCard from '../components/pr/PRCard';
 import { BlogSuggestion, GitHubPR } from '../types';
+import { generateSuggestion } from '../services/suggestions';
 
 interface PRAnalysisProps {
   prs: GitHubPR[];
   suggestions: BlogSuggestion[];
+  onSuggestionGenerated: (suggestion: BlogSuggestion) => void;
 }
 
 type PRFilter = 'all' | 'merged' | 'open' | 'closed';
@@ -17,10 +19,12 @@ const prFilters: { value: PRFilter; label: string }[] = [
   { value: 'closed', label: 'クローズ' },
 ];
 
-export default function PRAnalysis({ prs, suggestions }: PRAnalysisProps) {
+export default function PRAnalysis({ prs, suggestions, onSuggestionGenerated }: PRAnalysisProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [filter, setFilter] = useState<PRFilter>('all');
-  const [checkedIds, setCheckedIds] = useState<Record<string, boolean>>({});
+  const [generatingId, setGeneratingId] = useState<string | null>(null);
+  const [generationResults, setGenerationResults] = useState<Record<string, 'success' | 'error'>>({});
+  const [generationErrors, setGenerationErrors] = useState<Record<string, string>>({});
 
   const getSuggestionCount = (prId: string) =>
     suggestions.filter(s => s.prId === prId).length;
@@ -47,6 +51,40 @@ export default function PRAnalysis({ prs, suggestions }: PRAnalysisProps) {
 
   const totalAdditions = prs.reduce((sum, pr) => sum + pr.additions, 0);
   const totalDeletions = prs.reduce((sum, pr) => sum + pr.deletions, 0);
+
+  const handleGenerate = async (pr: GitHubPR) => {
+    setGeneratingId(pr.id);
+    setGenerationResults(prev => {
+      const next = { ...prev };
+      delete next[pr.id];
+      return next;
+    });
+    setGenerationErrors(prev => {
+      const next = { ...prev };
+      delete next[pr.id];
+      return next;
+    });
+
+    try {
+      const generated = await generateSuggestion(pr);
+      const suggestion: BlogSuggestion = {
+        ...generated,
+        id: `generated-${pr.id}-${Date.now()}`,
+        status: 'not_started',
+        createdAt: new Date().toISOString(),
+      };
+      onSuggestionGenerated(suggestion);
+      setGenerationResults(prev => ({ ...prev, [pr.id]: 'success' }));
+    } catch (error) {
+      setGenerationResults(prev => ({ ...prev, [pr.id]: 'error' }));
+      setGenerationErrors(prev => ({
+        ...prev,
+        [pr.id]: error instanceof Error ? error.message : '記事テーマ生成に失敗しました',
+      }));
+    } finally {
+      setGeneratingId(null);
+    }
+  };
 
   return (
     <div className="p-4 lg:p-8 max-w-6xl mx-auto space-y-6">
@@ -114,20 +152,27 @@ export default function PRAnalysis({ prs, suggestions }: PRAnalysisProps) {
                   </div>
                   <div className="flex flex-col items-end gap-1.5 pt-1">
                     <button
-                      onClick={() => setCheckedIds(prev => ({ ...prev, [pr.id]: true }))}
+                      onClick={() => handleGenerate(pr)}
+                      disabled={generatingId === pr.id}
                       className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold transition-all whitespace-nowrap ${
-                        checkedIds[pr.id]
-                          ? 'bg-slate-100 text-slate-500'
+                        generatingId === pr.id
+                          ? 'bg-slate-100 text-slate-400 cursor-not-allowed'
                           : 'bg-blue-600 hover:bg-blue-700 text-white shadow-sm'
                       }`}
                     >
-                      {checkedIds[pr.id] ? <CheckCircle2 size={13} /> : <Sparkles size={13} />}
-                      {checkedIds[pr.id] ? '確認済み' : '候補を確認'}
+                      <Sparkles size={13} className={generatingId === pr.id ? 'animate-pulse' : ''} />
+                      {generatingId === pr.id ? '生成中...' : 'テーマ生成'}
                     </button>
-                    {checkedIds[pr.id] && (
+                    {generationResults[pr.id] === 'success' && (
                       <span className="flex items-center gap-1 text-xs text-emerald-600 font-medium">
                         <CheckCircle2 size={12} />
-                        表示用の確認状態です
+                        提案と下書きを生成しました
+                      </span>
+                    )}
+                    {generationResults[pr.id] === 'error' && (
+                      <span className="flex items-center gap-1 text-xs text-red-500 font-medium max-w-[220px] text-right">
+                        <AlertCircle size={12} className="flex-shrink-0" />
+                        {generationErrors[pr.id]}
                       </span>
                     )}
                   </div>

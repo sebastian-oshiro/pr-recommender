@@ -26,6 +26,8 @@ GitHubのリポジトリから過去のPRを取得し、AIが以下を行いま�
 
 GitHub PR取得は、ブラウザからGitHub APIを直接呼ばず、同梱のNodeサーバーが `/api/github/prs` 経由で実行します。これにより、GitHubトークンをクライアント側へ露出させない構成にします。
 
+記事テーマ生成と記事下書き生成もNodeサーバーの `/api/suggestions/generate` 経由で実行します。AI APIキーはサーバー側の環境変数だけで扱います。
+
 ### 開発
 
 ```bash
@@ -34,10 +36,12 @@ cp .env.example .env
 npm run dev
 ```
 
-Private Repositoryやrate limit緩和が必要な場合は、`.env` に `GITHUB_TOKEN` を設定します。Public Repositoryの取得はトークンなしでも動作します。
+Private Repositoryやrate limit緩和が必要な場合は、`.env` に `GITHUB_TOKEN` を設定します。Public Repositoryの取得はトークンなしでも動作します。記事テーマ生成を利用する場合は、`GROQ_API_KEY` を設定します。
 
 ```bash
-GITHUB_TOKEN=github_pat_xxx
+GITHUB_TOKEN=
+GROQ_API_KEY=
+GROQ_MODEL=llama-3.3-70b-versatile
 ```
 
 ### 確認コマンド
