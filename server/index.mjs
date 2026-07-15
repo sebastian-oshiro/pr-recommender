@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url';
 import { handleGitHubPrsRequest } from './github-prs.mjs';
 import { handleSuggestionGenerationRequest } from './suggestions.mjs';
 import { handleSuggestionStoreRequest } from './suggestion-store.mjs';
+import { handleSettingsStoreRequest } from './settings-store.mjs';
 
 const rootDir = fileURLToPath(new URL('..', import.meta.url));
 const distDir = join(rootDir, 'dist');
@@ -70,6 +71,11 @@ const server = createServer((req, res) => {
 
   if (req.url?.startsWith('/api/suggestions')) {
     void handleSuggestionStoreRequest(req, res);
+    return;
+  }
+
+  if (req.url?.startsWith('/api/settings')) {
+    void handleSettingsStoreRequest(req, res);
     return;
   }
 

@@ -1,38 +1,59 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Github, Key, Bell, RefreshCw, Check, CircleAlert as AlertCircle, FileSliders as Sliders } from 'lucide-react';
 import { fetchGitHubPRs } from '../services/githubPrs';
+import { defaultSettings, loadSettings, saveSettings, UserSettings } from '../services/settings';
 import { GitHubPR } from '../types';
-
-interface UserSettings {
-  owner: string;
-  repo: string;
-  syncInterval: string;
-  minScore: number;
-  notifyNew: boolean;
-  notifyWeekly: boolean;
-}
 
 interface SettingsProps {
   onPRsFetched: (prs: GitHubPR[]) => void;
 }
 
 export default function Settings({ onPRsFetched }: SettingsProps) {
-  const [settings, setSettings] = useState<UserSettings>({
-    owner: '',
-    repo: '',
-    syncInterval: 'daily',
-    minScore: 75,
-    notifyNew: true,
-    notifyWeekly: true,
-  });
+  const [settings, setSettings] = useState<UserSettings>(defaultSettings);
   const [saved, setSaved] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [settingsError, setSettingsError] = useState<string | null>(null);
   const [syncing, setSyncing] = useState(false);
   const [syncError, setSyncError] = useState<string | null>(null);
   const [syncResult, setSyncResult] = useState<string | null>(null);
 
-  const handleSave = () => {
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2500);
+  useEffect(() => {
+    let active = true;
+
+    loadSettings()
+      .then(loadedSettings => {
+        if (active) setSettings(loadedSettings);
+      })
+      .catch(error => {
+        if (active) {
+          setSettingsError(error instanceof Error ? error.message : '設定の読み込みに失敗しました');
+        }
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const handleSave = async () => {
+    setSaving(true);
+    setSaved(false);
+    setSettingsError(null);
+
+    try {
+      const savedSettings = await saveSettings(settings);
+      setSettings(savedSettings);
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2500);
+    } catch (error) {
+      setSettingsError(error instanceof Error ? error.message : '設定の保存に失敗しました');
+    } finally {
+      setSaving(false);
+    }
   };
 
   const update = (patch: Partial<UserSettings>) =>
@@ -57,6 +78,14 @@ export default function Settings({ onPRsFetched }: SettingsProps) {
       setSyncing(false);
     }
   };
+
+  if (loading) {
+    return (
+      <div className="p-8 flex items-center justify-center">
+        <div className="w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
 
   return (
     <div className="p-4 lg:p-8 max-w-3xl mx-auto space-y-6">
@@ -201,7 +230,14 @@ export default function Settings({ onPRsFetched }: SettingsProps) {
       {saved && (
         <div className="flex items-start gap-3 p-4 bg-emerald-50 rounded-xl border border-emerald-200">
           <Check size={15} className="text-emerald-600 flex-shrink-0 mt-0.5" />
-          <p className="text-sm text-emerald-700 font-medium">表示上の保存状態を更新しました</p>
+          <p className="text-sm text-emerald-700 font-medium">設定を保存しました</p>
+        </div>
+      )}
+
+      {settingsError && (
+        <div className="flex items-start gap-3 p-4 bg-red-50 rounded-xl border border-red-200">
+          <AlertCircle size={15} className="text-red-600 flex-shrink-0 mt-0.5" />
+          <p className="text-sm text-red-700">{settingsError}</p>
         </div>
       )}
 
@@ -234,14 +270,17 @@ export default function Settings({ onPRsFetched }: SettingsProps) {
         </button>
         <button
           onClick={handleSave}
+          disabled={saving}
           className={`flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-bold transition-all shadow-sm ${
             saved
               ? 'bg-emerald-600 text-white'
-              : 'bg-blue-600 hover:bg-blue-700 text-white'
+              : saving
+                ? 'bg-slate-300 text-slate-500 cursor-not-allowed'
+                : 'bg-blue-600 hover:bg-blue-700 text-white'
           }`}
         >
           {saved ? <Check size={15} /> : null}
-          {saved ? '保存しました' : '変更を保存'}
+          {saving ? '保存中...' : saved ? '保存しました' : '変更を保存'}
         </button>
       </div>
     </div>

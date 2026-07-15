@@ -30,6 +30,7 @@ GitHub PR取得は、ブラウザからGitHub APIを直接呼ばず、同梱のN
 
 生成した提案データは、MVP向けにNodeサーバーがローカルJSONへ保存します。デフォルトの保存先は `.data/suggestions.json` です。
 提案ステータスの更新も同じローカルJSONへ反映します。
+設定画面の入力内容も、秘密情報を含めず `.data/settings.json` へ保存します。
 
 ### 開発
 
@@ -46,6 +47,7 @@ GITHUB_TOKEN=
 GROQ_API_KEY=
 GROQ_MODEL=llama-3.3-70b-versatile
 SUGGESTIONS_STORE_PATH=
+SETTINGS_STORE_PATH=
 ```
 
 ### 確認コマンド
