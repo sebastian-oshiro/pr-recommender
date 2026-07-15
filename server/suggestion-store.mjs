@@ -54,6 +54,16 @@ function normalizeStatus(value) {
   return ['not_started', 'in_progress', 'published'].includes(value) ? value : 'not_started';
 }
 
+function assertSuggestionStatus(value) {
+  if (['not_started', 'in_progress', 'published'].includes(value)) {
+    return value;
+  }
+
+  const error = new Error('status must be one of: not_started, in_progress, published');
+  error.status = 400;
+  throw error;
+}
+
 function normalizeNumber(value, fallback, min, max) {
   const number = typeof value === 'number' ? value : Number(value);
   if (!Number.isFinite(number)) return fallback;
@@ -114,8 +124,47 @@ export async function saveSuggestion(input) {
   return suggestion;
 }
 
+export async function updateSuggestionStatus(id, status) {
+  const normalizedId = normalizeString(id);
+
+  if (!normalizedId) {
+    throw new Error('suggestion id is required');
+  }
+
+  const normalizedStatus = assertSuggestionStatus(status);
+
+  const suggestions = await readSuggestions();
+  const index = suggestions.findIndex(item => item.id === normalizedId);
+
+  if (index === -1) {
+    const error = new Error('suggestion not found');
+    error.status = 404;
+    throw error;
+  }
+
+  const updated = {
+    ...suggestions[index],
+    status: normalizedStatus,
+  };
+  const nextSuggestions = [...suggestions];
+  nextSuggestions[index] = updated;
+
+  await writeSuggestions(nextSuggestions);
+  return updated;
+}
+
 export async function handleSuggestionStoreRequest(req, res) {
   try {
+    const url = new URL(req.url, 'http://localhost');
+    const statusMatch = url.pathname.match(/^\/api\/suggestions\/([^/]+)\/status$/);
+
+    if (req.method === 'PATCH' && statusMatch) {
+      const body = await readJsonBody(req);
+      const suggestion = await updateSuggestionStatus(decodeURIComponent(statusMatch[1]), body.status);
+      jsonResponse(res, 200, { suggestion });
+      return;
+    }
+
     if (req.method === 'GET') {
       const suggestions = await readSuggestions();
       jsonResponse(res, 200, { suggestions });
