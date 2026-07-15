@@ -94,6 +94,17 @@ export default function SuggestionDetail({ suggestion, pr, onClose, onStatusChan
             </div>
           )}
 
+          {suggestion.draftMarkdown && (
+            <div className="mb-6">
+              <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">記事下書き</h3>
+              <div className="bg-slate-950 text-slate-100 rounded-xl p-4 max-h-80 overflow-y-auto">
+                <pre className="text-xs leading-relaxed whitespace-pre-wrap font-mono">
+                  {suggestion.draftMarkdown}
+                </pre>
+              </div>
+            </div>
+          )}
+
           <div className="flex items-center gap-3">
             <button
               onClick={() => onStatusChange(suggestion.id, 'in_progress')}
