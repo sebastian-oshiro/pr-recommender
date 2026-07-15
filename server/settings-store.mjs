@@ -61,13 +61,15 @@ function normalizeScore(value) {
 }
 
 function normalizeSettings(input = {}) {
+  const source = input && typeof input === 'object' ? input : {};
+
   return {
-    owner: normalizeString(input.owner),
-    repo: normalizeString(input.repo),
-    syncInterval: normalizeSyncInterval(input.syncInterval),
-    minScore: normalizeScore(input.minScore),
-    notifyNew: normalizeBoolean(input.notifyNew, defaultSettings.notifyNew),
-    notifyWeekly: normalizeBoolean(input.notifyWeekly, defaultSettings.notifyWeekly),
+    owner: normalizeString(source.owner),
+    repo: normalizeString(source.repo),
+    syncInterval: normalizeSyncInterval(source.syncInterval),
+    minScore: normalizeScore(source.minScore),
+    notifyNew: normalizeBoolean(source.notifyNew, defaultSettings.notifyNew),
+    notifyWeekly: normalizeBoolean(source.notifyWeekly, defaultSettings.notifyWeekly),
   };
 }
 
@@ -76,7 +78,7 @@ export async function loadSettings() {
     const content = await readFile(storePath, 'utf8');
     return normalizeSettings(JSON.parse(content));
   } catch (error) {
-    if (error.code === 'ENOENT') return defaultSettings;
+    if (error.code === 'ENOENT') return { ...defaultSettings };
     throw error;
   }
 }
