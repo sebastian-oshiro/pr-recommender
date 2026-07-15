@@ -28,6 +28,8 @@ GitHub PR取得は、ブラウザからGitHub APIを直接呼ばず、同梱のN
 
 記事テーマ生成と記事下書き生成もNodeサーバーの `/api/suggestions/generate` 経由で実行します。AI APIキーはサーバー側の環境変数だけで扱います。
 
+生成した提案データは、MVP向けにNodeサーバーがローカルJSONへ保存します。デフォルトの保存先は `.data/suggestions.json` です。
+
 ### 開発
 
 ```bash
@@ -42,6 +44,7 @@ Private Repositoryやrate limit緩和が必要な場合は、`.env` に `GITHUB_
 GITHUB_TOKEN=
 GROQ_API_KEY=
 GROQ_MODEL=llama-3.3-70b-versatile
+SUGGESTIONS_STORE_PATH=
 ```
 
 ### 確認コマンド

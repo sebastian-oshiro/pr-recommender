@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Sidebar from './components/layout/Sidebar';
 import Header from './components/layout/Header';
 import Dashboard from './pages/Dashboard';
@@ -7,6 +7,7 @@ import PRAnalysis from './pages/PRAnalysis';
 import Settings from './pages/Settings';
 import SuggestionDetail from './components/suggestion/SuggestionDetail';
 import { samplePRs, sampleSuggestions } from './data/sampleData';
+import { fetchSavedSuggestions } from './services/suggestions';
 import { BlogSuggestion, GitHubPR, PageType, SuggestionStatus } from './types';
 import './App.css';
 
@@ -16,6 +17,26 @@ export default function App() {
   const [prs, setPRs] = useState<GitHubPR[]>(samplePRs);
   const [suggestions, setSuggestions] = useState(sampleSuggestions);
   const [selectedSuggestionId, setSelectedSuggestionId] = useState<string | null>(null);
+
+  useEffect(() => {
+    let active = true;
+
+    fetchSavedSuggestions()
+      .then(savedSuggestions => {
+        if (active && savedSuggestions.length > 0) {
+          setSuggestions(savedSuggestions);
+        }
+      })
+      .catch(() => {
+        if (active) {
+          setSuggestions(sampleSuggestions);
+        }
+      });
+
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const handleStatusChange = (id: string, status: SuggestionStatus) => {
     setSuggestions(prev =>
