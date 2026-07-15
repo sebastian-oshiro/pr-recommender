@@ -26,7 +26,7 @@ GitHubのリポジトリから過去のPRを取得し、AIが以下を行いま�
 
 GitHub PR取得は、ブラウザからGitHub APIを直接呼ばず、同梱のNodeサーバーが `/api/github/prs` 経由で実行します。これにより、GitHubトークンをクライアント側へ露出させない構成にします。
 
-記事テーマ生成と記事下書き生成もNodeサーバーの `/api/suggestions/generate` 経由で実行します。AI APIキーはサーバー側の環境変数だけで扱います。
+記事テーマ生成と記事下書き生成もNodeサーバーの `/api/suggestions/generate` 経由で実行します。xAI APIキーはサーバー側の環境変数だけで扱います。
 
 生成した提案データは、MVP向けにNodeサーバーがローカルJSONへ保存します。デフォルトの保存先は `.data/suggestions.json` です。
 提案ステータスの更新も同じローカルJSONへ反映します。
@@ -40,12 +40,12 @@ cp .env.example .env
 npm run dev
 ```
 
-Private Repositoryやrate limit緩和が必要な場合は、`.env` に `GITHUB_TOKEN` を設定します。Public Repositoryの取得はトークンなしでも動作します。記事テーマ生成を利用する場合は、`GROQ_API_KEY` を設定します。
+Private Repositoryやrate limit緩和が必要な場合は、`.env` に `GITHUB_TOKEN` を設定します。Public Repositoryの取得はトークンなしでも動作します。記事テーマ生成を利用する場合は、`XAI_API_KEY` を設定します。
 
 ```bash
 GITHUB_TOKEN=
-GROQ_API_KEY=
-GROQ_MODEL=llama-3.3-70b-versatile
+XAI_API_KEY=
+XAI_MODEL=grok-4.5
 SUGGESTIONS_STORE_PATH=
 SETTINGS_STORE_PATH=
 ```

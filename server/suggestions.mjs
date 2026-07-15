@@ -118,43 +118,51 @@ PR情報:
 }`;
 }
 
-async function callGroq(prompt) {
-  const apiKey = process.env.GROQ_API_KEY;
+function extractResponseText(data) {
+  if (typeof data?.output_text === 'string') {
+    return data.output_text;
+  }
+
+  const textParts = data?.output
+    ?.flatMap(item => item?.content ?? [])
+    ?.map(content => content?.text)
+    ?.filter(Boolean);
+
+  return textParts?.join('\n') ?? '';
+}
+
+async function callGrok(prompt) {
+  const apiKey = process.env.XAI_API_KEY;
   if (!apiKey) {
-    const error = new Error('GROQ_API_KEY is not configured');
+    const error = new Error('XAI_API_KEY is not configured');
     error.status = 500;
     throw error;
   }
 
-  const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+  const response = await fetch('https://api.x.ai/v1/responses', {
     method: 'POST',
     headers: {
       authorization: `Bearer ${apiKey}`,
       'content-type': 'application/json',
     },
     body: JSON.stringify({
-      model: process.env.GROQ_MODEL || 'llama-3.3-70b-versatile',
-      messages: [
-        {
-          role: 'user',
-          content: prompt,
-        },
-      ],
+      model: process.env.XAI_MODEL || 'grok-4.5',
+      input: prompt,
       temperature: 0.5,
-      max_tokens: 2200,
+      max_output_tokens: 2200,
     }),
   });
 
   if (!response.ok) {
     const body = await response.json().catch(() => ({}));
     const message = body?.error?.message || response.statusText;
-    const error = new Error(`Groq API error: ${message}`);
+    const error = new Error(`xAI API error: ${message}`);
     error.status = response.status;
     throw error;
   }
 
   const data = await response.json();
-  const content = data?.choices?.[0]?.message?.content;
+  const content = extractResponseText(data);
   if (!content) {
     throw new Error('AIからの応答が空です');
   }
@@ -164,7 +172,7 @@ async function callGroq(prompt) {
 
 export async function generateSuggestionForPr(pr) {
   validatePr(pr);
-  const content = await callGroq(buildPrompt(pr));
+  const content = await callGrok(buildPrompt(pr));
   const parsed = JSON.parse(extractJson(content));
   return normalizeSuggestion(parsed, pr);
 }
