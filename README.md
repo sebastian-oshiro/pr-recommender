@@ -22,7 +22,31 @@ GitHubのリポジトリから過去のPRを取得し、AIが以下を行いま�
 
 ## 技術的アプローチ
 
-未定
+フロントエンドは React / Vite / TypeScript / Tailwind CSS を利用します。
+
+GitHub PR取得は、ブラウザからGitHub APIを直接呼ばず、同梱のNodeサーバーが `/api/github/prs` 経由で実行します。これにより、GitHubトークンをクライアント側へ露出させない構成にします。
+
+### 開発
+
+```bash
+npm install
+cp .env.example .env
+npm run dev
+```
+
+Private Repositoryやrate limit緩和が必要な場合は、`.env` に `GITHUB_TOKEN` を設定します。Public Repositoryの取得はトークンなしでも動作します。
+
+```bash
+GITHUB_TOKEN=github_pat_xxx
+```
+
+### 確認コマンド
+
+```bash
+npm run lint
+npm run typecheck
+npm run build
+```
 
 ## ハルシネーションへの対策
 

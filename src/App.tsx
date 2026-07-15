@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import Sidebar from './components/layout/Sidebar';
 import Header from './components/layout/Header';
 import Dashboard from './pages/Dashboard';
@@ -7,15 +7,15 @@ import PRAnalysis from './pages/PRAnalysis';
 import Settings from './pages/Settings';
 import SuggestionDetail from './components/suggestion/SuggestionDetail';
 import { samplePRs, sampleSuggestions } from './data/sampleData';
-import { PageType, SuggestionStatus } from './types';
+import { GitHubPR, PageType, SuggestionStatus } from './types';
 import './App.css';
 
 export default function App() {
   const [currentPage, setCurrentPage] = useState<PageType>('dashboard');
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [prs, setPRs] = useState<GitHubPR[]>(samplePRs);
   const [suggestions, setSuggestions] = useState(sampleSuggestions);
   const [selectedSuggestionId, setSelectedSuggestionId] = useState<string | null>(null);
-  const prs = useMemo(() => samplePRs, []);
 
   const handleStatusChange = (id: string, status: SuggestionStatus) => {
     setSuggestions(prev =>
@@ -70,7 +70,7 @@ export default function App() {
             />
           )}
           {currentPage === 'settings' && (
-            <Settings />
+            <Settings onPRsFetched={setPRs} />
           )}
         </main>
       </div>
