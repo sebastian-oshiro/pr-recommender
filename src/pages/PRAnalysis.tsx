@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Search, GitPullRequest, GitMerge, Bot, Sparkles, CircleCheck as CheckCircle2, CircleAlert as AlertCircle } from 'lucide-react';
 import PRCard from '../components/pr/PRCard';
 import { BlogSuggestion, GitHubPR } from '../types';
-import { generateSuggestion } from '../services/suggestions';
+import { generateSuggestion, saveSuggestion } from '../services/suggestions';
 
 interface PRAnalysisProps {
   prs: GitHubPR[];
@@ -67,12 +67,10 @@ export default function PRAnalysis({ prs, suggestions, onSuggestionGenerated }: 
 
     try {
       const generated = await generateSuggestion(pr);
-      const suggestion: BlogSuggestion = {
+      const suggestion = await saveSuggestion({
         ...generated,
-        id: `generated-${pr.id}-${Date.now()}`,
         status: 'not_started',
-        createdAt: new Date().toISOString(),
-      };
+      });
       onSuggestionGenerated(suggestion);
       setGenerationResults(prev => ({ ...prev, [pr.id]: 'success' }));
     } catch (error) {

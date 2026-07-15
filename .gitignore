@@ -29,6 +29,9 @@ go.work.sum
 dist/
 *.tsbuildinfo
 
+# Local application data
+.data/
+
 # env file
 .env
 
