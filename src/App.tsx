@@ -7,7 +7,7 @@ import PRAnalysis from './pages/PRAnalysis';
 import Settings from './pages/Settings';
 import SuggestionDetail from './components/suggestion/SuggestionDetail';
 import { samplePRs, sampleSuggestions } from './data/sampleData';
-import { fetchSavedSuggestions } from './services/suggestions';
+import { fetchSavedSuggestions, updateSuggestionStatus } from './services/suggestions';
 import { BlogSuggestion, GitHubPR, PageType, SuggestionStatus } from './types';
 import './App.css';
 
@@ -38,10 +38,24 @@ export default function App() {
     };
   }, []);
 
-  const handleStatusChange = (id: string, status: SuggestionStatus) => {
+  const handleStatusChange = async (id: string, status: SuggestionStatus) => {
+    const previousSuggestion = suggestions.find(s => s.id === id);
+
     setSuggestions(prev =>
       prev.map(s => s.id === id ? { ...s, status } : s)
     );
+
+    try {
+      const updated = await updateSuggestionStatus(id, status);
+      setSuggestions(prev =>
+        prev.map(s => s.id === id ? updated : s)
+      );
+    } catch {
+      if (!previousSuggestion) return;
+      setSuggestions(prev =>
+        prev.map(s => s.id === id ? previousSuggestion : s)
+      );
+    }
   };
 
   const handleSuggestionGenerated = (suggestion: BlogSuggestion) => {

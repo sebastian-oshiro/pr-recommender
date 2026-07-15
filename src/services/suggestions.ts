@@ -1,4 +1,4 @@
-import { BlogSuggestion, GitHubPR } from '../types';
+import { BlogSuggestion, GitHubPR, SuggestionStatus } from '../types';
 
 export type GeneratedSuggestion = Omit<BlogSuggestion, 'id' | 'createdAt' | 'status'>;
 export type NewSuggestion = Omit<BlogSuggestion, 'id' | 'createdAt'>;
@@ -54,6 +54,26 @@ export async function saveSuggestion(suggestion: NewSuggestion): Promise<BlogSug
 
   if (!response.ok || !payload.suggestion) {
     throw new Error(payload.error || '提案データの保存に失敗しました');
+  }
+
+  return payload.suggestion;
+}
+
+export async function updateSuggestionStatus(
+  id: string,
+  status: SuggestionStatus
+): Promise<BlogSuggestion> {
+  const response = await fetch(`/api/suggestions/${encodeURIComponent(id)}/status`, {
+    method: 'PATCH',
+    headers: {
+      'content-type': 'application/json',
+    },
+    body: JSON.stringify({ status }),
+  });
+  const payload = await response.json() as SuggestionsResponse;
+
+  if (!response.ok || !payload.suggestion) {
+    throw new Error(payload.error || '提案ステータスの更新に失敗しました');
   }
 
   return payload.suggestion;
