@@ -1,26 +1,34 @@
 import { useState } from 'react';
-import { Github, Key, Bell, RefreshCw, Check, CircleAlert as AlertCircle, FileSliders as Sliders, Eye, EyeOff } from 'lucide-react';
+import { Github, Key, Bell, RefreshCw, Check, CircleAlert as AlertCircle, FileSliders as Sliders } from 'lucide-react';
+import { fetchGitHubPRs } from '../services/githubPrs';
+import { GitHubPR } from '../types';
 
 interface UserSettings {
-  githubUsername: string;
-  githubToken: string;
+  owner: string;
+  repo: string;
   syncInterval: string;
   minScore: number;
   notifyNew: boolean;
   notifyWeekly: boolean;
 }
 
-export default function Settings() {
+interface SettingsProps {
+  onPRsFetched: (prs: GitHubPR[]) => void;
+}
+
+export default function Settings({ onPRsFetched }: SettingsProps) {
   const [settings, setSettings] = useState<UserSettings>({
-    githubUsername: '',
-    githubToken: '',
+    owner: '',
+    repo: '',
     syncInterval: 'daily',
     minScore: 75,
     notifyNew: true,
     notifyWeekly: true,
   });
   const [saved, setSaved] = useState(false);
-  const [showToken, setShowToken] = useState(false);
+  const [syncing, setSyncing] = useState(false);
+  const [syncError, setSyncError] = useState<string | null>(null);
+  const [syncResult, setSyncResult] = useState<string | null>(null);
 
   const handleSave = () => {
     setSaved(true);
@@ -29,6 +37,26 @@ export default function Settings() {
 
   const update = (patch: Partial<UserSettings>) =>
     setSettings(prev => ({ ...prev, ...patch }));
+
+  const handleSync = async () => {
+    setSyncing(true);
+    setSyncError(null);
+    setSyncResult(null);
+
+    try {
+      const prs = await fetchGitHubPRs({
+        owner: settings.owner,
+        repo: settings.repo,
+        state: 'all',
+      });
+      onPRsFetched(prs);
+      setSyncResult(`${prs.length}件のPRを取得しました`);
+    } catch (error) {
+      setSyncError(error instanceof Error ? error.message : 'GitHub PRの取得に失敗しました');
+    } finally {
+      setSyncing(false);
+    }
+  };
 
   return (
     <div className="p-4 lg:p-8 max-w-3xl mx-auto space-y-6">
@@ -44,42 +72,28 @@ export default function Settings() {
         </div>
         <div className="px-6 py-5 space-y-4">
           <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1.5">GitHubユーザー名</label>
+            <label className="block text-xs font-semibold text-slate-700 mb-1.5">リポジトリオーナー</label>
             <input
               type="text"
-              value={settings.githubUsername}
-              onChange={e => update({ githubUsername: e.target.value })}
+              value={settings.owner}
+              onChange={e => update({ owner: e.target.value })}
               className="w-full px-3 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-400 transition-all"
-              placeholder="GitHubのユーザー名を入力"
+              placeholder="例: openai"
             />
           </div>
           <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1.5">
-              <span className="flex items-center gap-1.5">
-                <Key size={12} />
-                個人アクセストークン (PAT)
-              </span>
-            </label>
-            <div className="relative">
-              <input
-                type={showToken ? 'text' : 'password'}
-                value={settings.githubToken}
-                onChange={e => update({ githubToken: e.target.value })}
-                className="w-full px-3 py-2.5 pr-10 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-400 transition-all font-mono"
-                placeholder="テスト用の文字列を入力"
-              />
-              <button
-                type="button"
-                onClick={() => setShowToken(v => !v)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
-              >
-                {showToken ? <EyeOff size={14} /> : <Eye size={14} />}
-              </button>
-            </div>
+            <label className="block text-xs font-semibold text-slate-700 mb-1.5">リポジトリ名</label>
+            <input
+              type="text"
+              value={settings.repo}
+              onChange={e => update({ repo: e.target.value })}
+              className="w-full px-3 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-400 transition-all"
+              placeholder="例: openai-node"
+            />
             <div className="flex items-start gap-2 mt-2 p-3 bg-amber-50 rounded-lg border border-amber-200">
               <AlertCircle size={13} className="text-amber-600 flex-shrink-0 mt-0.5" />
               <p className="text-xs text-amber-700">
-                <strong>必要なスコープ：</strong> <code className="bg-amber-100 px-1 rounded">repo</code>（プライベートリポジトリの場合）または <code className="bg-amber-100 px-1 rounded">public_repo</code>
+                <strong>認証情報：</strong> Private Repositoryを取得する場合は、サーバー側の <code className="bg-amber-100 px-1 rounded">GITHUB_TOKEN</code> を設定してください。ブラウザにはトークンを入力しません。
               </p>
             </div>
           </div>
@@ -178,9 +192,9 @@ export default function Settings() {
       </section>
 
       <div className="flex items-start gap-3 p-4 bg-blue-50 rounded-xl border border-blue-200">
-        <AlertCircle size={15} className="text-blue-600 flex-shrink-0 mt-0.5" />
+        <Key size={15} className="text-blue-600 flex-shrink-0 mt-0.5" />
         <p className="text-sm text-blue-700">
-          この画面はUI移植用のプレビューです。入力内容の保存、GitHub同期、外部API接続はまだ実装していません。
+          GitHub APIはサーバー側から呼び出します。Public Repositoryはトークンなしでも取得できますが、rate limitやPrivate Repository対応には <code className="bg-blue-100 px-1 rounded">GITHUB_TOKEN</code> が必要です。
         </p>
       </div>
 
@@ -191,22 +205,32 @@ export default function Settings() {
         </div>
       )}
 
-      {settings.githubToken && (
+      {syncError && (
         <div className="flex items-start gap-3 p-4 bg-red-50 rounded-xl border border-red-200">
           <AlertCircle size={15} className="text-red-600 flex-shrink-0 mt-0.5" />
-          <p className="text-sm text-red-700">
-            現在は保存処理がないため、実際のトークンではなくテスト用の文字列で確認してください。
-          </p>
+          <p className="text-sm text-red-700">{syncError}</p>
+        </div>
+      )}
+
+      {syncResult && (
+        <div className="flex items-start gap-3 p-4 bg-emerald-50 rounded-xl border border-emerald-200">
+          <Check size={15} className="text-emerald-600 flex-shrink-0 mt-0.5" />
+          <p className="text-sm text-emerald-700 font-medium">{syncResult}</p>
         </div>
       )}
 
       <div className="flex items-center justify-between">
         <button
-          disabled
-          className="flex items-center gap-2 px-4 py-2.5 text-sm rounded-xl transition-all font-medium text-slate-400 bg-slate-100 cursor-not-allowed"
+          onClick={handleSync}
+          disabled={syncing || !settings.owner || !settings.repo}
+          className={`flex items-center gap-2 px-4 py-2.5 text-sm rounded-xl transition-all font-medium ${
+            syncing || !settings.owner || !settings.repo
+              ? 'text-slate-400 bg-slate-100 cursor-not-allowed'
+              : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+          }`}
         >
-          <RefreshCw size={15} />
-          同期は未実装
+          <RefreshCw size={15} className={syncing ? 'animate-spin' : ''} />
+          {syncing ? '取得中...' : 'PRを取得'}
         </button>
         <button
           onClick={handleSave}
