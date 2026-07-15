@@ -1,38 +1,102 @@
 # PR Recommender
 
-GitHub上のPull Request（PR）を分析し、技術記事のテーマ提案から構成・下書き作成までを支援するAIアプリケーション。
+GitHub Pull Requestから技術記事のテーマと下書きを生成し、提案として管理するAIアプリケーションです。
 
-## 背景
+開発中に得られた技術的な知見は、Pull Requestの説明、差分、レビュー、ラベルなどに蓄積されます。PR Recommenderは、それらのPR情報をもとに「記事にできそうなテーマ」を見つけ、記事化の理由や下書きまで生成することを目的としています。
 
-技術広報の現場では、記事を書くこと自体だけでなく、構想を練ることにも時間を要する。
+## 主な機能
 
-そこで、開発中に得られた知見の多くは、GitHub上のPRに蓄積されていることを活用して、PRに埋もれている技術的な知見をAIで抽出し、記事として発信できる形へ変換するアプリケーションを開発します。
+- GitHub RepositoryからPull Requestを取得
+- PR情報の正規化
+- PRをもとにした記事テーマ生成
+- 記事下書きMarkdownの生成
+- 生成した提案データの保存
+- 提案ステータスの更新
+- GitHub連携や通知設定の保存
+- ダッシュボード、提案一覧、PR分析、設定画面のUI
 
-## プロダクト概要
+## 現在の実装範囲
 
-GitHubのリポジトリから過去のPRを取得し、AIが以下を行います。
+### 実装済み
 
-1. PRから技術的な知見を抽出
-2. 記事にできそうなテーマを提案
-3. 記事化する理由と根拠となるPRを表示
-4. 想定読者や記事構成を生成
-5. 選択したテーマの記事下書きを作成
+- `owner/repo` を指定したGitHub PR取得
+- GitHub APIレスポンスをアプリ用のPRデータへ正規化
+- xAI Grok APIを使った記事テーマ生成
+- 記事下書きMarkdownの生成
+- 生成した提案のローカルJSON保存
+- 保存済み提案の読み込み
+- 提案ステータスの更新
+- 設定画面の入力内容保存
+- UIレイアウト、サイドバー、ヘッダー、カード、フォーム、詳細表示
 
-記事を完全に自動投稿するのではなく、AIが提案した内容をユーザーが確認・選択・編集する設計を想定しています。
+### 未実装
 
-## 技術的アプローチ
+- 認証/ユーザー管理
+- DB保存
+- 複数ユーザー対応
+- 複数リポジトリ横断分析
+- 過去記事との重複チェック
+- RAG
+- 記事編集画面
+- 記事公開ワークフロー
 
-フロントエンドは React / Vite / TypeScript / Tailwind CSS を利用します。
+## 技術スタック
 
-GitHub PR取得は、ブラウザからGitHub APIを直接呼ばず、同梱のNodeサーバーが `/api/github/prs` 経由で実行します。これにより、GitHubトークンをクライアント側へ露出させない構成にします。
+- Frontend: React 18 / TypeScript / Vite
+- Styling: Tailwind CSS
+- Icons: lucide-react
+- Backend: Node.js built-in HTTP server
+- External API: GitHub REST API
+- AI: xAI Grok API
+- Storage: Local JSON files
+- Package manager: npm
 
-記事テーマ生成と記事下書き生成もNodeサーバーの `/api/suggestions/generate` 経由で実行します。xAI APIキーはサーバー側の環境変数だけで扱います。
+## アーキテクチャ
 
-生成した提案データは、MVP向けにNodeサーバーがローカルJSONへ保存します。デフォルトの保存先は `.data/suggestions.json` です。
-提案ステータスの更新も同じローカルJSONへ反映します。
-設定画面の入力内容も、秘密情報を含めず `.data/settings.json` へ保存します。
+```mermaid
+flowchart LR
+  Browser[React UI] --> Node[Node API Server]
+  Node --> GitHub[GitHub REST API]
+  Node --> Grok[xAI Grok API]
+  Node --> Suggestions[(.data/suggestions.json)]
+  Node --> Settings[(.data/settings.json)]
+```
 
-### 開発
+ブラウザからGitHub APIやAI APIを直接呼ばず、同梱のNodeサーバーを経由します。`GITHUB_TOKEN` や `XAI_API_KEY` はサーバー側の環境変数として扱い、クライアント側へ露出させない構成にしています。
+
+MVP段階ではDBを使わず、提案データと設定データをローカルJSONに保存します。保存処理はサーバー側APIに閉じているため、後からDBへ置き換えやすい構成です。
+
+## API
+
+| Endpoint | Method | Description |
+| --- | --- | --- |
+| `/api/github/prs` | GET | GitHub PR一覧を取得 |
+| `/api/suggestions/generate` | POST | PRから記事テーマと下書きを生成 |
+| `/api/suggestions` | GET | 保存済み提案を取得 |
+| `/api/suggestions` | POST | 提案を保存 |
+| `/api/suggestions/:id/status` | PATCH | 提案ステータスを更新 |
+| `/api/settings` | GET | 設定を取得 |
+| `/api/settings` | PUT | 設定を保存 |
+
+## データ保存
+
+デフォルトでは、MVP向けに以下のローカルJSONへ保存します。
+
+```text
+.data/suggestions.json
+.data/settings.json
+```
+
+保存先は環境変数で変更できます。
+
+```bash
+SUGGESTIONS_STORE_PATH=
+SETTINGS_STORE_PATH=
+```
+
+`.data/` 配下はローカル実行時のデータ保存先であり、Git管理対象には含めません。
+
+## セットアップ
 
 ```bash
 npm install
@@ -40,7 +104,13 @@ cp .env.example .env
 npm run dev
 ```
 
-Private Repositoryやrate limit緩和が必要な場合は、`.env` に `GITHUB_TOKEN` を設定します。Public Repositoryの取得はトークンなしでも動作します。記事テーマ生成を利用する場合は、`XAI_API_KEY` を設定します。
+起動後、ブラウザで以下を開きます。
+
+```text
+http://127.0.0.1:5173/
+```
+
+## 環境変数
 
 ```bash
 GITHUB_TOKEN=
@@ -50,88 +120,85 @@ SUGGESTIONS_STORE_PATH=
 SETTINGS_STORE_PATH=
 ```
 
-### 確認コマンド
+### `GITHUB_TOKEN`
+
+GitHub API用のトークンです。Public Repositoryは未設定でも取得できますが、Private Repositoryの取得やrate limit緩和が必要な場合は設定します。
+
+### `XAI_API_KEY`
+
+xAI Grok API用のトークンです。記事テーマと下書き生成に使用します。
+
+### `XAI_MODEL`
+
+xAIで使用するGrokモデル名です。未設定時は `grok-4.5` を使用します。
+
+### `SUGGESTIONS_STORE_PATH`
+
+提案データの保存先を変更したい場合に設定します。未設定時は `.data/suggestions.json` を使用します。
+
+### `SETTINGS_STORE_PATH`
+
+設定データの保存先を変更したい場合に設定します。未設定時は `.data/settings.json` を使用します。
+
+## 開発コマンド
 
 ```bash
+npm run dev
 npm run lint
 npm run typecheck
 npm run build
+npm run start
 ```
 
-## ハルシネーションへの対策
+| Command | Description |
+| --- | --- |
+| `npm run dev` | 開発サーバーを起動 |
+| `npm run lint` | ESLintを実行 |
+| `npm run typecheck` | TypeScript型チェックを実行 |
+| `npm run build` | production buildを作成 |
+| `npm run start` | production buildをNodeサーバーで起動 |
 
-LLMがPRに書かれていない内容を生成する可能性があります。
+## 画面構成
 
-その対策として、以下を検討しています。
+- Dashboard
+  - 提案数、公開済み数、進行中数などの概要を表示
 
-* 根拠となるPRを生成結果に紐付ける
-* 入力された情報以外を推測しないようプロンプトで制約する
-* 生成結果に参照元を表示する
-* 構造化出力を利用する
-* 公開前に人間が内容を確認する
-* 必要に応じてRAGを導入する
+- Suggestions
+  - 保存済みの記事提案を一覧表示
+  - ステータス変更や詳細表示を行う
 
-MVPでは、対象となるPRを根拠情報としてLLMに渡します。
+- PR Analysis
+  - 取得したPRを表示
+  - PRから記事テーマと下書きを生成して保存する
 
-将来的に組織全体の大量のPRを扱う場合は、埋め込み検索やベクトルデータベースを利用したRAGへの拡張を検討します。
+- Settings
+  - GitHub Repositoryのowner/repo、同期間隔、通知設定、最低スコアを保存する
 
-## セキュリティ
+## 実装上の方針
 
-企業のGitHub Organizationや非公開リポジトリを対象とする場合、ソースコードやPRの内容が外部へ漏れない設計が必要です。
+### 秘密情報をクライアントに置かない
 
-MVPでは、以下の方針を想定しています。
+GitHub tokenやxAI API keyはNodeサーバー側の環境変数で扱います。ブラウザ側のフォームやLocalStorageには保存しません。
 
-* 公開リポジトリを中心に利用する
-* GitHubトークンをクライアント側へ露出させない
-* 認証情報をログへ出力しない
-* PRの内容を必要以上に保存しない
-* LLMへ送信する情報を必要最小限にする
-* 取得したデータを永続保存しない構成を検討する
+### プロトタイプから必要な部分だけ移植する
 
-企業利用を想定した将来的な対策として、以下を検討します。
+初期プロトタイプにはSupabase前提の処理やブラウザ側token保存が含まれていました。現在の実装では、main側の構成に合わせてUIと必要な処理だけを選択的に取り込み、秘密情報や不要な依存関係は移植していません。
 
-* Private Repositoryへの最小権限アクセス
-* 組織単位のアクセス制御
-* 機密情報のマスキング
-* 監査ログ
-* データを学習に利用しないAIサービスの選定
-* Azure OpenAIなど企業向け環境の利用
-* ローカルLLMや閉域環境への対応
+### AI出力をアプリで扱いやすい形に正規化する
 
-## 今後の展望
+AI生成結果は、記事タイトル、要約、キーポイント、タグ、難易度、想定読了時間、下書きMarkdownとして扱います。生成結果をそのまま画面表示するだけでなく、保存・ステータス管理できる形にしています。
 
-### 2. ユーザーフィードバックの収集
+### MVPではローカルJSON保存にする
 
-エンジニアや技術広報担当者に利用してもらい、次の観点から改善します。
+DBや認証を入れる前に、PR取得からAI生成、提案保存、管理までの一連の体験を確認できることを優先しています。
 
-* 記事テーマが実際の業務に合っているか
-* 根拠となるPRの提示方法が分かりやすいか
-* 記事構成や下書きが実用的か
-* どこまでAIに任せたいか
-* セキュリティ面で不安がないか
+## 今後の拡張
 
-### 3. 組織向け機能への拡張
-
-将来的には、個人のリポジトリだけでなく、GitHub Organization全体を対象にします。
-
-* 複数リポジトリの横断分析
-* チームごとの記事テーマ提案
-* 技術広報担当者向け管理画面
-* 公開可能なPRの選別
-* Organization内の権限管理
-* 過去記事との重複判定
-* 社内ナレッジ共有への活用
-
-### 4. RAGの導入
-
-PRや過去の記事が増えた場合は、すべてのデータを毎回LLMへ送信する方式では限界があります。
-
-そのため、以下の構成を検討します。
-
-* PRや記事をチャンクに分割
-* Embeddingを作成
-* ベクトルデータベースへ保存
-* 記事テーマに関連する情報のみ検索
-* 検索結果を根拠として記事を生成
-
-これにより、コストを抑えながら、回答精度や根拠性を向上させます。
+- 認証/ユーザー管理
+- PostgreSQLなどのDB保存
+- GitHub App連携
+- 複数Repositoryの横断分析
+- 過去記事との重複チェック
+- RAGによる根拠検索
+- 記事編集画面
+- 公開前レビューや公開ワークフロー
